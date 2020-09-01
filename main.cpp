@@ -12,9 +12,11 @@ int min_width = 1000, min_height = 1000;
 float zoom = 1, zoom_increment = 0.1;
 Horse *horse;
 Obj *objects[30];
+
 int n_objects = 0;
 int active_camera = 3;
 float gforce = 0.00;
+float min_y_zero_value,max_y_zero_value;
 
 
 bool _w = false;                                                                            //  <<-global->> bool for whether the w key is down
@@ -32,7 +34,8 @@ bool colliding = false;
 void create_objects()
 {
     horse = new Horse();
-    //horse_obj = new Obj("horse");
+    min_y_zero_value = horse->get_min_y();                                         // problema de colisao
+    max_y_zero_value = horse->get_max_y();                                         // problema de colisao
     //objects[n_objects++] = new Obj("floor");
     //objects[n_objects++] = new Obj("walls");
     //objects[n_objects++] = new Obj("roof");
@@ -41,8 +44,7 @@ void create_objects()
     
 }
 
-void init()
-{
+void init(){
 
     glClearColor(0.2, 0.2, 0.2, 0.0);
     glEnable(GL_DEPTH_TEST);
@@ -56,20 +58,16 @@ void init()
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
     create_objects();
-
-
 }
 
-void set_camera(GLdouble eyeX, GLdouble eyeY, GLdouble eyeZ, GLdouble centerX, GLdouble centerY, GLdouble centerZ, GLdouble upX, GLdouble upY, GLdouble upZ)
-{
+void set_camera(GLdouble eyeX, GLdouble eyeY, GLdouble eyeZ, GLdouble centerX, GLdouble centerY, GLdouble centerZ, GLdouble upX, GLdouble upY, GLdouble upZ){
     eyeX = (eyeX - centerX) / zoom + centerX;
     eyeY = (eyeY - centerY) / zoom + centerY;
     eyeZ = (eyeZ - centerZ) / zoom + centerZ;
     gluLookAt(eyeX, eyeY, eyeZ, centerX, centerY, centerZ, upX, upY, upZ);
 }
 
-void camera()
-{
+void camera(){
     switch (active_camera)
     {
         case 1:
@@ -94,6 +92,46 @@ void camerachaser(){
     set_camera(horse->xx , 3+ horse->yy, 20, horse->xx, 0.0, 5.0, 0.0, 1.0, 0.0);
 }
 
+void colision_detection(){
+	float player_min[2],player_max[2];
+    float object_min[2],object_max[2];
+    int collidings = 0;
+    player_min[0]= horse->get_min_x();
+    player_min[1]= horse->get_min_y();
+    player_max[0]= horse->get_max_x();
+    player_max[1]= horse->get_max_y(); 
+
+    for (int i = 0; i < n_objects; ++i){
+    	object_min[0] = objects[i]->get_min_x();
+    	object_min[1] = objects[i]->get_min_y();
+    	object_max[0] = objects[i]->get_max_x();
+    	object_max[1] = objects[i]->get_max_y();
+    	
+    	if((player_min[0] <= object_max[0] && player_max[0] >= object_min[0]) && 
+    	   (player_min[1] <= object_max[1]-1 && player_max[1] >= object_min[1]-1))
+			collidings++;
+		
+		
+    }
+
+    if (collidings>0)
+			colliding = true;
+		else
+			colliding = false;
+
+
+}
+
+void move_hit_box_x(float increment_x){
+	horse->min_x =horse->min_x  + increment_x;
+	horse->max_x =horse->max_x  + increment_x;
+}
+
+void move_hit_box_y(float increment_y){
+	horse->min_y =horse->min_y  + increment_y;
+	horse->max_y =horse->max_y  + increment_y;
+}
+
 void movement(){
     float speedfactor = 0;
     
@@ -114,50 +152,79 @@ void movement(){
        // if(_w) 
        //     horse->zz = horse->zz-0.07;
         if(_a){
+        	float increment_x = horse->xx;
             horse->xx = horse->xx-0.09-speedfactor;
+            increment_x -=  horse->xx;
+            increment_x *= -1;
+            
             horse->rot =-1;
+            move_hit_box_x(increment_x);
+            
         }
        // if(_s)
        //     horse->zz = horse->zz+0.07;
         if(_d){
+        	float increment_x = horse->xx;
             horse->xx = horse->xx+0.09+speedfactor;
             horse->rot =1;
+            increment_x -=  horse->xx;
+            increment_x *= -1;
+
+            move_hit_box_x(increment_x);
+            
         }
     }
 
-
-    //if(_w && _a){horse->zz = horse->zz+0.01 ; horse->xx = horse->xx+0.01;}
-    //if(_w && _d){horse->zz = horse->zz+0.01; horse->xx = horse->xx-0.01;}
-    //if(_s && _a){horse->zz = horse->zz-0.01; horse->xx = horse->xx+0.01;}
-    //if(_s && _d){horse->zz = horse->zz-0.01; horse->xx = horse->xx-0.01;}
 
     if( gforce < 0.05 && airup){
         airdown=true;
         airup=false;
     }
 
-    if( horse->yy <= 0.0){
-        horse->yy = 0.0;
+    //if( horse->yy <= 0.0){
+    //    horse->yy = 0.0;
+    //    horse->min_y = min_y_zero_value;
+    //    horse->max_y = max_y_zero_value;
+    //    airdown=false;
+    //}
+
+    if(colliding){
+    	horse->min_y = min_y_zero_value;
+        horse->max_y = max_y_zero_value;
         airdown=false;
     }
 
+    //if( horse->yy <= 0.0 && !airup){
+    //    gforce=0;
+    //}
 
-    if( horse->yy <= 0.0 && !airup){
+    if( colliding && !airup){
         gforce=0;
     }
 
     if(airup && gforce != 0 && !airdown){
-        
+        float increment_y = horse->yy;
+
         horse->yy = horse->yy+gforce;
         gforce = gforce- gforce/10;
+
+        increment_y -=  horse->yy;
+        increment_y *= -1;
+        move_hit_box_y(increment_y);
+
 
 
     }
 
-    if(airdown && horse->yy > 0.0 && !airup){
+    if(airdown && !airup && !colliding){
+        float increment_y = horse->yy;
         horse->yy = horse->yy-gforce;
         if(gforce<0.5)
             gforce = gforce +(9*gforce/10)/8;
+
+        increment_y -=  horse->yy;
+        increment_y *= -1;
+        move_hit_box_y(increment_y);
     }
 
 
@@ -172,8 +239,48 @@ void movement(){
    // printf("airdown: %d  airup: %d y: %f gforce: %f\n",airdown,airup, x,force );
 }
 
-void display()
-{
+void get_player_box_display(){
+	float min_x = horse->get_min_x();
+	float min_y = horse->get_min_y();
+	float max_x = horse->get_max_x();
+	float max_y = horse->get_max_y();
+
+	if(colliding){
+		glColor3f(1,0,0);
+	}else{
+		glColor3f(1,1,1);
+	}
+
+	glBegin(GL_QUADS);
+    glVertex2f(min_x,min_y);
+    glVertex2f(max_x,min_y);
+    glVertex2f(max_x,max_y);
+    glVertex2f(min_x,max_y);
+    glEnd();
+}
+
+void get_map_box_display(){
+	
+	for (int i = 0; i < n_objects; i++){
+    	
+		float min_x = objects[i]->get_min_x();
+		float min_y = objects[i]->get_min_y();
+		float max_x = objects[i]->get_max_x();
+		float max_y = objects[i]->get_max_y();
+		
+
+	    glBegin(GL_QUADS);
+	    glVertex2f(min_x,min_y);
+	    glVertex2f(max_x,min_y);
+	    glVertex2f(max_x,max_y);
+	    glVertex2f(min_x,max_y);
+    	glEnd();
+
+   }
+}
+
+void display(){
+
 // Limpa os "buffers"
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 // Indica que as próximas operações de matrizes serão feitas sobre
@@ -185,17 +292,26 @@ void display()
 // Os objetos serão desenhados e animados aqui
 // ---
     //camera();
+
     camerachaser();
     movement();
     glColor3f(1.0f, 1.0f, 1.0f);
 
     
     horse->display();
+    get_player_box_display();
     
+   
+	
+
+
     glPushMatrix();
      glTranslatef(0,-1,0);
-    for (int i = 0; i < n_objects; i++)
-        objects[i]->display();
+     get_map_box_display();
+    //for (int i = 0; i < n_objects; i++)
+        //objects[i]->display();
+
+     colision_detection();
 
     glPopMatrix();
      glColor3f(1.0,0.0,0.0); // red x

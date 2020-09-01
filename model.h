@@ -6,7 +6,7 @@ using namespace std;
 
 class Obj
 {
-
+float min_x,min_y,min_z,max_x,max_y,max_z;
 
 private:
     class Model
@@ -97,7 +97,7 @@ private:
     }
 
 public:
-    float min_x,min_y,max_x,max_y;
+    
 
     Model *model;
     
@@ -120,43 +120,16 @@ public:
         model = new Model(model_path);
         
         load_texture(texture_path);
+
+        min_max_find();
     }
 
-    void min_max_find(){
-       
-
-        min_x = model->v[model->v_i[0][0] - 1][0];
-        max_x = model->v[model->v_i[0][0] - 1][0];
-        min_y = model->v[model->v_i[0][0] - 1][1];
-        max_y = model->v[model->v_i[0][0] - 1][1];
-
-        for (int i = 0; i < model->n_f; i++)
-        {
-            for (int j = 0; j < 3; j++)
-            {   
-                if(min_x > model->v[model->v_i[i][j] - 1][0])
-                    min_x = model->v[model->v_i[i][j] - 1][0];
-
-                if(max_x < model->v[model->v_i[i][j] - 1][0])
-                    max_x = model->v[model->v_i[i][j] - 1][0];
-
-                if(min_y > model->v[model->v_i[i][j] - 1][1])
-                    min_y = model->v[model->v_i[i][j] - 1][1];
-
-                if(max_y < model->v[model->v_i[i][j] - 1][1])
-                    max_y = model->v[model->v_i[i][j] - 1][1];
-            }
-        }
-        
-       
-    }
-
-    Obj(char *model_path, char *texture_path)
+     Obj(char *model_path, char *texture_path)
     {
         
         model = new Model(model_path);
         load_texture(texture_path);
-        //min_max_find();
+        min_max_find();
     }
 
     ~Obj()
@@ -164,12 +137,87 @@ public:
         delete model;
     }
 
+    void min_max_find(){
+       
+        min_z = model->v[model->v_i[0][0] - 1][2];
+        max_z = model->v[model->v_i[0][0] - 1][2];
+
+        min_x = model->v[model->v_i[0][0] - 1][0];
+        max_x = model->v[model->v_i[0][0] - 1][0];
+
+        min_y = model->v[model->v_i[0][0] - 1][1];
+        max_y = model->v[model->v_i[0][0] - 1][1];
+
+        for (int i = 0; i < model->n_f; i++)
+        {
+            for (int j = 0; j < 3; j++)
+            {   
+                if(min_z > model->v[model->v_i[i][j] - 1][2])
+                    min_z = model->v[model->v_i[i][j] - 1][2];
+
+                if(max_z < model->v[model->v_i[i][j] - 1][2])
+                    max_z = model->v[model->v_i[i][j] - 1][2];
+
+                if(min_y > model->v[model->v_i[i][j] - 1][1])
+                    min_y = model->v[model->v_i[i][j] - 1][1];
+
+                if(max_y < model->v[model->v_i[i][j] - 1][1])
+                    max_y = model->v[model->v_i[i][j] - 1][1];
+
+                if(min_x > model->v[model->v_i[i][j] - 1][0])
+                    min_x = model->v[model->v_i[i][j] - 1][0];
+
+                if(max_x < model->v[model->v_i[i][j] - 1][0])
+                    max_x = model->v[model->v_i[i][j] - 1][0];
+            }
+        }
+
+        
+    }
+
+    float get_min_x(){
+        return min_x;
+    }
+    float get_min_y(){
+        return min_y;
+    }
+     float get_min_z(){
+        return min_z;
+    }
+
+    float get_max_z(){
+        return max_z;
+    }
+
+    float get_max_x(){
+        return max_x;
+    }
+
+    float get_max_y(){
+        return max_y;
+    }
+
+
+
+
+   
+
     void display()
-    {
+    {   
+
+        //min_max_find();
+        
+        //printf(" min_x: %f max_x:%f min_y: %f max_y: %f\n", min_x,max_x,min_y,max_y);
+
+
         glBindTexture(GL_TEXTURE_2D, texture);
         glEnable(GL_TEXTURE_2D);
         glBegin(GL_TRIANGLES);
        
+
+
+
+
         for (int i = 0; i < model->n_f; i++)
         {
             for (int j = 0; j < 3; j++)
@@ -183,7 +231,7 @@ public:
         
         glEnd();
 
-         printf(" min_x: %f max_x:%f min_y: %f max_y: %f\n", &min_x,&max_x,&min_y,&max_y);
+       //printf("no modelo min_x: %f max_x:%f min_y: %f max_y: %f\n", min_x,max_x,min_y,max_y);
 
         glDisable(GL_TEXTURE_2D);
 
