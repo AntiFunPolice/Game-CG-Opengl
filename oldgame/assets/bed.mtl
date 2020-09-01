@@ -1,0 +1,24 @@
+# Blender MTL File: 'horse.blend'
+# Material Count: 2
+
+newmtl Wood.001
+Ns 43.977845
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.800000 0.800000
+Ks 0.421053 0.421053 0.421053
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd /home/tiagonunes/Documentos/Universidade/CG/P2/horse/paulo/texturacama.jpg
+
+newmtl Wood.002
+Ns 33.517998
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.800000 0.800000
+Ks 0.754386 0.754386 0.754386
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd /home/tiagonunes/Documentos/Universidade/CG/P2/horse/paulo/texturacama.jpg
