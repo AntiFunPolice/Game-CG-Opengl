@@ -15,9 +15,10 @@ Obj *objects[30];
 
 int n_objects = 0;
 int active_camera = 3;
-float gforce = 0.00;
-float min_y_zero_value,max_y_zero_value;
+float gforce = 0.5;
+float min_y_zero_value,max_y_zero_value,min_x_zero_value,max_x_zero_value;
 
+int colliding_with=-1;
 
 bool _w = false;                                                                            //  <<-global->> bool for whether the w key is down
 bool _a = false;                                                                            //  <<-global->> bool for whether the a key is down
@@ -29,6 +30,9 @@ bool _space = false;                                                            
 bool airup = false;
 bool airdown = false;
 bool colliding = false;
+bool jumping=false;
+bool ontop = false;
+bool grav = true;
 
 
 void create_objects()
@@ -36,6 +40,8 @@ void create_objects()
     horse = new Horse();
     min_y_zero_value = horse->get_min_y();                                         // problema de colisao
     max_y_zero_value = horse->get_max_y();                                         // problema de colisao
+    min_x_zero_value = horse->get_min_x();                                         // problema de colisao
+    max_x_zero_value = horse->get_max_x();  
     //objects[n_objects++] = new Obj("floor");
     //objects[n_objects++] = new Obj("walls");
     //objects[n_objects++] = new Obj("roof");
@@ -92,8 +98,52 @@ void camerachaser(){
     set_camera(horse->xx , 3+ horse->yy, 20, horse->xx, 0.0, 5.0, 0.0, 1.0, 0.0);
 }
 
+
+
+void collision_solver(){
+    
+    //bool Axis_x,Axis_y;
+    float increment=0;
+    //float player_min_x= horse->get_min_x();
+    float player_min_y= horse->get_min_y();
+    //float player_max_x= horse->get_max_x();
+    float player_max_y= horse->get_max_y(); 
+
+    gforce=0;
+    
+    //float object_min_x = objects[colliding_with]->get_min_x();
+    float object_min_y = objects[colliding_with]->get_min_y()-1;
+    //float object_max_x = objects[colliding_with]->get_max_x();
+    float object_max_y = objects[colliding_with]->get_max_y()-1;
+
+    //float object_height = abs(object_max_y) - abs(object_min_y);
+    //float player_height = abs(player_max_y) - abs(player_min_y);
+
+   // if(player_max_y>object_max_y){
+        
+        increment = abs(object_max_y)-abs(player_min_y);
+        horse->yy   -= increment-0.01;
+        horse->max_y -=increment-0.01;
+        horse->min_y -=increment-0.01;
+        
+
+    //}else if(player_max_y<object_max_y){
+        
+       //increment =abs(player_max_y) - abs(object_min_y);
+       //horse->yy+=increment;
+       //horse->max_y-=increment;
+       //horse->min_y-=increment;
+        
+    //}
+
+    
+
+
+}
+
 void colision_detection(){
-	float player_min[2],player_max[2];
+	
+    float player_min[2],player_max[2];
     float object_min[2],object_max[2];
     int collidings = 0;
     player_min[0]= horse->get_min_x();
@@ -108,17 +158,60 @@ void colision_detection(){
     	object_max[1] = objects[i]->get_max_y();
     	
     	if((player_min[0] <= object_max[0] && player_max[0] >= object_min[0]) && 
-    	   (player_min[1] <= object_max[1]-1 && player_max[1] >= object_min[1]-1))
+    	   (player_min[1] <= object_max[1]-1 && player_max[1] >= object_min[1]-1)){
 			collidings++;
-		
+            colliding_with=i;
+		}
 		
     }
 
-    if (collidings>0)
+    if (collidings>0){
 			colliding = true;
-		else
-			colliding = false;
+            jumping=0;
+            collision_solver();
 
+	}else{
+		colliding = false;
+        colliding_with=-1;
+    }
+
+    
+
+}
+
+void is_on_top(){
+
+    float player_min[2],player_max[2];
+    float object_min[2],object_max[2];
+    player_min[0]= horse->get_min_x();
+    player_min[1]= horse->get_min_y();
+    player_max[0]= horse->get_max_x();
+    player_max[1]= horse->get_max_y(); 
+    float player_centerX = player_min[0]+((player_max[0] - player_min[0])/2);
+    int ontops=0;
+    
+
+    for (int i = 0; i < n_objects; ++i){
+        object_min[0] = objects[i]->get_min_x();
+        object_min[1] = objects[i]->get_min_y();
+        object_max[0] = objects[i]->get_max_x();
+        object_max[1] = objects[i]->get_max_y();
+        
+        float diference = player_min[1] - (object_max[1]-1);
+
+
+
+        if(((player_min[0] >= object_min[0] && player_min[0] <= object_max[0])||(player_max[0] >= object_min[0] && player_max[0] <= object_max[0])) && object_max[1]-1 < player_max[1] && diference <= 0.5){
+            ontops++;
+        }
+        
+    }
+
+    if (ontops>0){
+            ontop=true;
+    }else{
+        ontop=false;
+    }
 
 }
 
@@ -132,13 +225,27 @@ void move_hit_box_y(float increment_y){
 	horse->max_y =horse->max_y  + increment_y;
 }
 
+
+
 void movement(){
     float speedfactor = 0;
     
-    if(airup || airdown) { 
+
+
+    if(_space){
+        if(!jumping ){
+            
+            airup=true;
+            gforce = 0.5;
+            airdown=false;
+            jumping = true;
+       }
+    }
+
+    if(jumping) { 
         if(airup)
             horse->inc = 10;
-        else
+        else 
             horse->inc = -5;
 
         speedfactor = 0.03;
@@ -148,12 +255,11 @@ void movement(){
         horse->inc=0;
     }
 
-    if(_w||_a||_s||_d){
-       // if(_w) 
-       //     horse->zz = horse->zz-0.07;
+    if(_a||_d){
+      
         if(_a){
         	float increment_x = horse->xx;
-            horse->xx = horse->xx-0.09-speedfactor;
+            horse->xx = horse->xx-0.1-speedfactor;
             increment_x -=  horse->xx;
             increment_x *= -1;
             
@@ -161,11 +267,9 @@ void movement(){
             move_hit_box_x(increment_x);
             
         }
-       // if(_s)
-       //     horse->zz = horse->zz+0.07;
         if(_d){
         	float increment_x = horse->xx;
-            horse->xx = horse->xx+0.09+speedfactor;
+            horse->xx = horse->xx+0.1+speedfactor;
             horse->rot =1;
             increment_x -=  horse->xx;
             increment_x *= -1;
@@ -181,28 +285,34 @@ void movement(){
         airup=false;
     }
 
-    //if( horse->yy <= 0.0){
-    //    horse->yy = 0.0;
-    //    horse->min_y = min_y_zero_value;
-    //    horse->max_y = max_y_zero_value;
-    //    airdown=false;
-    //}
+
+    if(!colliding && !airup){
+        airdown=1;
+    }
+
+    if(!ontop && !jumping){
+        float increment_y = horse->yy;
+        horse->yy = horse->yy-gforce;
+        if(gforce<0.5){
+            gforce = gforce +(9*gforce/10)/8;
+        }
+
+        increment_y -=  horse->yy;
+        increment_y *= -1;
+        move_hit_box_y(increment_y);
+    }
 
     if(colliding){
-    	horse->min_y = min_y_zero_value;
-        horse->max_y = max_y_zero_value;
+        jumping = false;
+        //double_jump = false;
+       //space_press=0;
+        gforce=0.5;
         airdown=false;
     }
 
-    //if( horse->yy <= 0.0 && !airup){
-    //    gforce=0;
-    //}
+    if(airup && gforce != 0 && !airdown && jumping){
+        
 
-    if( colliding && !airup){
-        gforce=0;
-    }
-
-    if(airup && gforce != 0 && !airdown){
         float increment_y = horse->yy;
 
         horse->yy = horse->yy+gforce;
@@ -211,16 +321,13 @@ void movement(){
         increment_y -=  horse->yy;
         increment_y *= -1;
         move_hit_box_y(increment_y);
-
-
-
     }
 
-    if(airdown && !airup && !colliding){
+    if(!airup && !colliding && jumping){
         float increment_y = horse->yy;
         horse->yy = horse->yy-gforce;
         if(gforce<0.5)
-            gforce = gforce +(9*gforce/10)/8;
+            gforce = gforce +(9*gforce/10)/9;
 
         increment_y -=  horse->yy;
         increment_y *= -1;
@@ -228,15 +335,24 @@ void movement(){
     }
 
 
-    if(_space){
-        if(airup==false && airdown== false){
-            airup=true;
-            gforce = 0.5;
-        }
-    }
-    float x = horse->yy;
+
+
+    float y = horse->yy;
     float force = gforce;
-   // printf("airdown: %d  airup: %d y: %f gforce: %f\n",airdown,airup, x,force );
+
+  // printf("airdown: %d  airup: %d y: %f gforce: %f colliding: %d jumping: %d\n ontop: %d double_jump: %d\n",airdown,airup, y ,force, colliding,jumping,ontop);
+    if(!ontop){
+    if(horse->yy <= -20){
+        gforce=0.5;
+        jumping= false;
+        horse->xx = 0;
+        horse->yy = 0;
+        horse->min_y = min_y_zero_value;
+        horse->max_y = max_y_zero_value;
+        horse->min_x = min_x_zero_value;
+        horse->max_x = max_x_zero_value;
+    }
+    }
 }
 
 void get_player_box_display(){
@@ -262,19 +378,19 @@ void get_player_box_display(){
 void get_map_box_display(){
 	
 	for (int i = 0; i < n_objects; i++){
-    	
+     	
 		float min_x = objects[i]->get_min_x();
 		float min_y = objects[i]->get_min_y();
 		float max_x = objects[i]->get_max_x();
 		float max_y = objects[i]->get_max_y();
 		
 
-	    glBegin(GL_QUADS);
-	    glVertex2f(min_x,min_y);
-	    glVertex2f(max_x,min_y);
-	    glVertex2f(max_x,max_y);
-	    glVertex2f(min_x,max_y);
-    	glEnd();
+	    //glBegin(GL_QUADS);
+	    //glVertex2f(min_x,min_y);
+	    //glVertex2f(max_x,min_y);
+	    //glVertex2f(max_x,max_y);
+	    //glVertex2f(min_x,max_y);
+    	//glEnd();
 
    }
 }
@@ -296,24 +412,25 @@ void display(){
     camerachaser();
     movement();
     glColor3f(1.0f, 1.0f, 1.0f);
-
     
+    is_on_top();
+
     horse->display();
-    get_player_box_display();
-    
-   
-	
-
 
     glPushMatrix();
      glTranslatef(0,-1,0);
-     get_map_box_display();
-    //for (int i = 0; i < n_objects; i++)
-        //objects[i]->display();
+     
+    for (int i = 0; i < n_objects; i++)
+        objects[i]->display();
 
-     colision_detection();
-
+   
+    //get_map_box_display();
     glPopMatrix();
+    
+
+    colision_detection();
+
+     //get_player_box_display();
      glColor3f(1.0,0.0,0.0); // red x
     glBegin(GL_LINES);
     // x aix
@@ -467,7 +584,7 @@ int main(int argc, char **argv)
     glutDisplayFunc(display);
 // Define a função de "reshape", que é chamada sempre que o tamanho
 // da janela muda
-    glutReshapeFunc(reshape);
+    //glutReshapeFunc(reshape);
     call_display(0);
 
     glutKeyboardFunc(keyboard);

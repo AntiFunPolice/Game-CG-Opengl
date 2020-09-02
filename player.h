@@ -9,6 +9,7 @@ public:
     int dir = 1;
     float rot = 1 , inc = 0;
     bool walking = false;
+    
    
 
     Horse()
